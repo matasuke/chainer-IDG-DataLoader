@@ -20,14 +20,46 @@ return_yes_or_no(){
     done
 }
 
+echo 'download MSCOCO images ?(yes/no)'
+images=`return_yes_or_no`
 echo 'download MSCOCO official caption dataset? (yes/no)'
 mscoco=`return_yes_or_no`
 echo 'download STAIR captions? (yes/no)'
 stair=`return_yes_or_no`
 
+if [ -d data/images/original ]; then
+        mkdir -p data/images/original
+fi
+
+if $images; then
+        # download official images
+        echo 'downloading MSCOCO images...'
+        if [ ! -d data/images/original/train2014 ]; then
+                curl -# http://images.cocodataset.org/zips/train2014.zip > \
+                        data/images/original/train2014.zip
+                unzip data/images/original/train2014.zip -d data/images/original/
+                rm data/images/original/train2014.zip
+        fi
+
+        if [ -d data/images/original/val2014 ]; then
+                curl -# http://images/cocodataset.org/zips/val2014.zip > \
+                        data/images/original/val2014.zip
+                unzip data/images/original/val2014.zip -d data/images/original/
+                rm data/images/original/val2014.zip
+        fi
+
+        if [ -d data/images/original/test2014 ]; then
+                curl -# http://images/cocodataset.org/zips/test2014.zip > \
+                        data/images/original/test2014.zip
+                unzip data/images/original/test2014.zip -d data/images/original/
+                rm data/images/original/test2014.zip
+        fi
+fi
+
 if [ ! -d data/captions/original ]; then
         mkdir -p data/captions/original \
-                 data/captions/formatted
+                 data/captions/formatted/MSCOCO_captions/ \
+                 data/captions/formatted/STAIR_captions
 fi
 
 if $mscoco; then
@@ -56,3 +88,5 @@ if $stair; then
                 rm data/captions/original/STAIR_captions/stair_captions_v1.2.tar.gz
         fi
 fi
+
+echo 'finished.'

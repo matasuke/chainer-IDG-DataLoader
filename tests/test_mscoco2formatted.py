@@ -6,12 +6,18 @@ from mscoco2formatted import *
 
 class Testmscoco2formatted(unittest.TestCase):
     def setUp(self):
-        MSCOCO_DATA = Path('data/captions/train/mscoco.json')
-        OUTPUT_DIR = Path('data/result')
+        MSCOCO_DATA = Path('data/captions/original/MSCOCO_captions_en/captions_train2014.json')
+        OUTPUT_DIR = Path('data/captions/formatted/MSCOCO_captions/captions_train2014_formatted.pickle')
 
         self.assertTrue(MSCOCO_DATA.exists())
-        self.assertTrue(OUTPUT_DIR.eexists())
+        self.assertFalse(OUTPUT_DIR.exists())
 
     def test_read_mscoco(self):
-        INVALID_PATH = Path('data/captions/train/invalid.json')
+        pass
+
+    def test_make_groups(self):
+        pass
+
+    def test_make_formatted(self):
+        pass
 

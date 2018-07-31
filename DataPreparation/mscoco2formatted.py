@@ -35,9 +35,8 @@ def read_mscoco(mscoco_path):
     '''
 
     p = Path(mscoco_path)
-    if p.exists() and p.suffix == 'json':
-        with open(p) as f:
-            dataset = json.load(f)
+    with open(p) as f:
+        dataset = json.load(f)
 
     annots = dataset['annotations']
     imgs = dataset['images']
@@ -113,14 +112,13 @@ if __name__ == '__main__':
                         help='path to output\(File format has to be json or pickle\)')
     args = parser.parse_args()
 
-    imgs, annots = read_mscoco(args.MSCOCO_DATASET)
-    itoa = make_groups(annots)
-    out_data = make_formatted(itoa, imgs)
+    in_path = Path(args.MSCOCO_DATASET)
+    out_path = Path(args.OUT)
 
-    p = Path(args.OUT)
-    if p.suffix == 'pickle':
-        with open(p, 'wb') as f:
-            pickle.dump(out_data, f, pickle.HIGHEST_PROTOCOL)
-    elif p.suffix == 'json':
-        with open(p, 'w') as f:
-            json.dump(out_data, f)
+    if in_path.exists():
+        annots, imgs = read_mscoco(in_path)
+        itoa = make_groups(annots)
+        out_data = make_formatted(itoa, imgs)
+
+    with open(out_path, 'wb') as f:
+        pickle.dump(out_data, f, pickle.HIGHEST_PROTOCOL)

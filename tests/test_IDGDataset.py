@@ -6,4 +6,18 @@ from IDGDataset import IDGDatasetBase
 
 class TestIDGDatasetBase(unittest.TestCase):
     def setup(self):
-        IMAGE_DIR_PATH = Path('data/')
+        pass
+
+    def test_get_example(self):
+        pass
+
+    def test_index2token(self):
+        pass
+
+    def test_token2index(self):
+        pass
+
+
+    def test_word_ids(self):
+        pass
+
