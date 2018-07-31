@@ -80,7 +80,7 @@ def make_formatted(itoa, imgs):
         data_origin = img['file_name'].split('_')[1]
 
         pairs = {}
-        pairs['file_path'] = Path(data_origin, img['file_name'])
+        pairs['file_path'] = str(Path(data_origin, img['file_name']))
         pairs['id'] = img_id
 
         sentences = []

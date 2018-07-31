@@ -59,7 +59,9 @@ fi
 if [ ! -d data/captions/original ]; then
         mkdir -p data/captions/original \
                  data/captions/formatted/MSCOCO_captions/ \
-                 data/captions/formatted/STAIR_captions
+                 data/captions/formatted/STAIR_captions/ \
+                 data/captions/converted/MSCOC_captions/ \
+                 data/captions/converted/STAIR_captions/
 fi
 
 if $mscoco; then
