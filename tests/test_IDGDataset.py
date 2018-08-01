@@ -22,8 +22,38 @@ class TestIDGDatasetBase(unittest.TestCase):
             preload_features=True
         )
 
-    def test_get_example_preload(self):
+    def test_attributes(self):
         pass
+
+    def test_get_example_preload(self):
+        randn = np.random.randint(0, len(self.IDG_Dataset))
+        image, caption = self.IDG_Dataset.get_example(randn)
+
+        self.assertIsInstance(image, np.ndarray)
+        self.assertEqual(image.shape[0], 2048)
+
+        self.assertIsInstance(caption, np.ndarray)
+
+    def test_get_example_raw_captions_with_no_preload(self):
+        self.IDG_Dataset.preload_features= False
+        self.IDG_Dataset.raw_caption = True
+
+        randn = np.random.randint(0, len(self.IDG_Dataset))
+        image, caption = self.IDG_Dataset.get_example(randn)
+
+        self.assertIsInstance(image, np.ndarray)
+        self.assertEqual(image.shape[0], 2048)
+
+        self.assertIsInstance(caption, list)
+
+    def test_get_example_raw_image(self):
+        self.IDG_Dataset.raw_img = True
+
+        randn = np.random.randint(0, len(self.IDG_Dataset))
+        image, caption = self.IDG_Dataset.get_example(randn)
+
+        self.assetIsInstance()
+
 
     def test_get_raw_data(self):
         pass
