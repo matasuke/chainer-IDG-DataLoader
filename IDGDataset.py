@@ -2,6 +2,7 @@ import json
 import pickle
 from pathlib import Path
 
+from tqdm import tqdm
 import cv2
 import numpy as np
 import chainer
@@ -9,7 +10,7 @@ import chainer
 from utils.process_image import ImgProcesser
 
 
-class Seq2SeqDatasetBase(chainer.dataset.DatasetMixin):
+class IDGDatasetBase(chainer.dataset.DatasetMixin):
     """
     Chainer Dataset Class for image captioning generation.
 
@@ -24,11 +25,16 @@ class Seq2SeqDatasetBase(chainer.dataset.DatasetMixin):
         path to directory of images.
     img_feature_root: str
         path to directory of image features.
-    use_img_features: bool, default True
-        Use image features or not.
+    raw_caption: bool, default False
+        use raw captions(list) instead of numpy.ndarray format.
+    raw_img: bool, default False,
+        use raw images insted of extracted features beforehand.
     img_mean: str, default imagenet
         image mean used for preprocess images.
         imagenet mean is used as a default.
+    img_size: tuple, default (224, 224)
+        output image size after processing images.
+        This attribute is used only when you load raw images.
     preload_features: bool, default False
         preload all image features onto RAM.
     """
@@ -36,9 +42,11 @@ class Seq2SeqDatasetBase(chainer.dataset.DatasetMixin):
             self,
             dataset_path,
             vocab_path,
-            img_feature_root,
             img_root,
-            use_img_features=True,
+            img_feature_root,
+            raw_caption=False,
+            raw_img=False,
+            img_size=(224, 224),
             img_mean='imagenet',
             preload_features=False,
     ):
@@ -46,13 +54,12 @@ class Seq2SeqDatasetBase(chainer.dataset.DatasetMixin):
         if Path(dataset_path).exists() and Path(vocab_path).exists():
             self.dataset = self.load_data(dataset_path)
             self.word_ids = self.load_data(vocab_path)
-            self.captions = self.dataset['captions']
-            self.images = self.dataset['images']
         else:
             raise FileNotFoundError
 
-        self.num_captions = len(self.captions)
-        self.num_images = len(self.images)
+        self.captions = self.dataset['captions']
+        self.images = self.dataset['images']
+
         self.cap2img = {
             caption['caption_idx']: caption['img_idx'] for caption in self.captions
         }
@@ -60,7 +67,7 @@ class Seq2SeqDatasetBase(chainer.dataset.DatasetMixin):
             v: k for k, v in self.word_ids.items()
         }
 
-        if not use_img_features:
+        if raw_img:
             self.img_proc = ImgProcesser(mean_type=img_mean)
             self.img_root = Path(img_root)
             if not self.img_root.exists() and not self.img_root.is_dir():
@@ -71,26 +78,118 @@ class Seq2SeqDatasetBase(chainer.dataset.DatasetMixin):
                 raise FileNotFoundError
 
         if preload_features:
-            self._img_features = np.array(
+
+            print("Loading image features...")
+
+            self.img_features = np.array(
                 [
                     np.load('{0}.npz'.format(
-                        self.img_root / Path(image['file_path']).with_suffix("")
-                    ))['arr_0'] for image in self.images
+                        self.img_feature_root / Path(image['file_path']).with_suffix("")
+                    ))['arr_0'] for image in tqdm(self.images)
                 ]
             )
+
+        self.img_size = img_size
+        self.raw_caption = raw_caption
+        self.raw_img = raw_img
+        self.preload_features = preload_features
 
     def __len__(self):
         return len(self.captions)
 
-    def get_raw_data():
-        pass
+    def get_example(self, i):
+        """
+        get image and caption based on caption index.
 
+        Parameters
+        ----------
+        index: int
+            caption index of image and caption.
+            both are extraced from self.images and self.captions
+
+        Returns
+        -------
+        img: numpy.ndarray
+            image RGB values or image features extracted by CNN model beforehand.
+
+        Notes
+        -----
+        Use Raw Images
+        if self.raw_img is True, then raw image insted of extracted features is used.
+        This reads each images one by one.
+        So it would take much time.
+
+        Preload Features
+        if self.preload_features is True, then preloaded feature vectores are used.
+        It doesn't take times, but it consumes RAM.
+        Be careful to use this functions if RAM is less than 16GM(in case of MSCOCO dataset).
+
+        Load Each Features one by one
+        if self.raw_img and self.preload_features are both False,
+        then each feature vectors are loaded one by one.
+        if would take much time than using preloaded features,
+        but doesn't require much RAM.
+
+        Use Raw Caption
+        if self.raw_caption is True, then it returns list of caption.
+        otherwise, it returns ndarray of caption.
+        """
+
+        if self.raw_img:
+            img_path = self.img_root / self.images[self.cap2img[i]]['file_path']
+            img = self.img_proc.load_img(
+                str(img_path),
+                img_size=self.img_size,
+                resize=True,
+                expand_dim=False
+            )
+
+        else:
+            if self.preload_features:
+                img = self.img_features[self.cap2img[i]]
+            else:
+                img_path = Path(self.images[self.cap2img[i]]['file_path']).with_suffix("")
+                img = np.load('{0}.npz'.format(self.img_feature_root / img_path))['arr_0']
+
+        if self.raw_caption:
+            caption = self.captions[i]['caption']
+        else:
+            caption = np.array(self.captions[i]['caption'])
+
+        return img, caption
+
+    def get_raw_data(self, index):
+        """
+        get raw image path and raw caption.
+
+        Parameters
+        ----------
+        index: int
+            caption index of image and caption.
+            both are extraced from self.images and self.captions
+
+        Returns
+        -------
+        img_path: str
+            image path designated by caption index.
+        raw_caption: list
+            list of caption tokens.
+        """
+        img_path = self.images[self.cap2img[index]]['file_path']
+        img_path = self.img_root / img_path
+
+        caption = self.captions[index]['captions']
+        raw_caption = self.index2token(caption)
+
+        return img_path, raw_caption
 
     @staticmethod
     def load_data(path):
+        '''load pickle and json file.'''
+
         in_path = Path(path)
         ext = in_path.suffix
-        if ext == '.pickle':
+        if ext == '.pkl':
             with in_path.open('rb') as f:
                 dataset = pickle.load(f)
         elif ext == '.json':
@@ -103,21 +202,34 @@ class Seq2SeqDatasetBase(chainer.dataset.DatasetMixin):
 
         return dataset
 
-    def get_example(self, i):
-        pass
-
     def token2index(self, tokens):
+        """return indies from tokens."""
+
         return [self.inv_word_ids[token] for token in tokens]
 
     def index2token(self, indices):
+        """return tokens from indices."""
         return [self.word_ids[index] for index in indices]
 
-    def load_img(self, img_path, img_h=224, img_w=224, expand_dim=True):
-        img = cv2.imread(img_path).astype(np.float32)
-        img_size = (img.shape[0], img.shape[1])
-        resized_size = (img_h, img_w)
+    @property
+    def get_word_ids(self):
+        """get word_ids"""
+        return self.word_ids
 
-        if img_size != resized_size:
-            img = cv2.resize(img, resized_size)
+    @property
+    def get_unk_ratio(self):
+        """get <UNK> ratio in self.captions"""
+        unk = sum((cap['caption'] == self.word_ids['<UNK>']).sum() for cap in self.captions)
+        words = sum(len(cap['caption']) for cap in self.captions)
 
-        img = img.transpose(2, 0, 1)
+        return round((unk / words) * 100, 3)
+
+    @property
+    def get_configurations(self):
+        """get configurations"""
+        res = {}
+
+        res['vocabulary_size'] = len(self.get_word_ids)
+        res['num_size'] = len(self.captions)
+        res['num_size'] = len(self.images)
+        res['unk_ratio'] = self.get_unk_ratio

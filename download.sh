@@ -27,8 +27,9 @@ mscoco=`return_yes_or_no`
 echo 'download STAIR captions? (yes/no)'
 stair=`return_yes_or_no`
 
-if [ -d data/images/original ]; then
+if [ ! -d data/images/original ]; then
         mkdir -p data/images/original
+        mkdir -p data/images/features
 fi
 
 if $images; then

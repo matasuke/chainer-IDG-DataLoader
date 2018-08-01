@@ -78,15 +78,15 @@ class ImgProcesser:
         So when resize is False, image is not resized
         even if img_size is set.
         '''
-        img = cv2.imread(img_path).astype(np.float32)
-        img_size = (img.shape[0], img.shape[1])
-        expected_size = img_size
 
-        if resize and img_size != expected_size:
-            img = cv2.resize(img, expected_size)
+        img = cv2.imread(img_path).astype(np.float32)
+        input_size = (img.shape[0], img.shape[1])
+
+        if resize and input_size != img_size:
+            img = cv2.resize(img, img_size)
 
         img = img.transpose(2, 0, 1)
-        img = self.img_mean
+        img -= self.img_mean
 
         if expand_dim:
             img = np.expand_dims(img, axis=0)
@@ -107,3 +107,6 @@ class ImgProcesser:
 
         img = img_array.transpose(1, 2, 0)
         cv2.imwrite(save_path, img)
+
+    def open_img(self, img_array):
+        cv2.imshow('ImgProcesser', img_array)
