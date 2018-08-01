@@ -63,28 +63,21 @@ class Seq2SeqDatasetBase(chainer.dataset.DatasetMixin):
         if not use_img_features:
             self.img_proc = ImgProcesser(mean_type=img_mean)
             self.img_root = Path(img_root)
-            if not self.img_root.exists() and not self.img_root.is_dir():
+            if not self.img_root.exists() and self.img_root.is_dir():
                 raise FileNotFoundError
         else:
             self.img_feature_root = Path(img_feature_root)
-            if not self.img_feature_root.exists() and not self.img_feature_root.is_dir():
+            if not self.img_feature_root.exists():
                 raise FileNotFoundError
 
         if preload_features:
             self._img_features = np.array(
                 [
-                    np.load('{0}.npz'.format(
-                        self.img_root / Path(image['file_path']).with_suffix("")
-                    ))['arr_0'] for image in self.images
+                    np.load('{0}.npz'.format(self.img_root / Path()))
                 ]
             )
-
     def __len__(self):
-        return len(self.captions)
-
-    def get_raw_data():
-        pass
-
+        return len(self.pairs)
 
     @staticmethod
     def load_data(path):

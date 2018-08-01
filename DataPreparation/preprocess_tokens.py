@@ -89,8 +89,8 @@ class Tokenizer(object):
 
         if self.tokenize:
             if lang == 'jp':
-                import janome
-                self.ja_tokenizer = janome.tokenizer.Tokenizer()
+                from janome.tokenizer import Tokenizer
+                self.ja_tokenizer = Tokenizer()
                 self.segmenter = lambda sen: list(
                     token.surface for token in self.ja_tokenizer.tokenize(sen)
                 )
@@ -281,26 +281,26 @@ def create_word_dict(word_counter, cutoff=5, vocab_size=False):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('INPUT', type=str,
                         help="input formatted file by mscoco2formatted.py")
     parser.add_argument('OUT_DATASET', type=str,
                         help="output file name")
-    parser.add_argument('--in_vocabulary', type=str, default='',
+    parser.add_argument('--in_vocab_path', type=str, default='',
                         help="input vocaburay name for encode \
                         captions used in validation and test dataset.")
-    parser.add_argument('--out_vocabulary', type=str, default='',
+    parser.add_argument('--out_vocab_path', type=str, default='',
                         help="output vocaburary dict name")
-    parser.add_argument('--tokenize', action='store_false',
-                        help='disable tokenize in_path file')
+    parser.add_argument('--tokenize', action='store_true', default=False,
+                        help='tokenize in_path file')
     parser.add_argument('--lang', type=str, choices=['jp', 'en', 'ch'],
                         help="language to be processed")
-    parser.add_argument('--tolower', action='store_false',
-                        help="disable lower all characters for all sentences.")
-    parser.add_argument('--remove_suffix', action='store_false',
-                        help="disable remove all suffix like ?,!.")
-    parser.add_argument('--replace_digits', action='store_false',
-                        help="disable replace digits to 0 for all sentences.")
+    parser.add_argument('--tolower', action='store_true', default=False,
+                        help="lower all characters for all sentences.")
+    parser.add_argument('--remove_suffix', action='store_true', default=False,
+                        help="remove all suffix like ?,!.")
+    parser.add_argument('--replace_digits', action='store_true', default=False,
+                        help="replace digits to 0 for all sentences.")
     parser.add_argument('--cutoff', type=int, default=5,
                         help="cutoff words less than the number digignated")
     parser.add_argument('--vocab_size', type=int, default=0,
@@ -321,8 +321,8 @@ if __name__ == '__main__':
     FORMATTED_MSCOCO = load_pickle(IN_PATH)
     CAPTIONS, IMGS, WORD_COUNTER = create_captions(FORMATTED_MSCOCO, TOKENIZER)
 
-    if args.in_vocabulary:
-        WORD_INDEX = load_pickle(args.in_vocabulary)
+    if args.in_vocab_path:
+        WORD_INDEX = load_pickle(args.in_vocab_path)
     else:
         WORD_INDEX = create_word_dict(WORD_COUNTER, args.cutoff, args.vocab_size)
 
@@ -332,5 +332,5 @@ if __name__ == '__main__':
 
     save_pickle(OUT_DATASET, args.OUT_DATASET)
 
-    if args.out_vocabulary:
-        save_pickle(WORD_INDEX, args.out_vocabulary)
+    if args.out_vocab_path:
+        save_pickle(WORD_INDEX, args.out_vocab_path)
