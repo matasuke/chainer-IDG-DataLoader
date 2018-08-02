@@ -46,4 +46,4 @@ sh shells/pre_process.sh
 '''
 
 ### Check DataLoader
-For usage, please see [example.ipynb]()
+For usage, please see [example.ipynb](https://github.com/matasukef/chainer-IDG-DataLoader/blob/master/example.ipynb)
