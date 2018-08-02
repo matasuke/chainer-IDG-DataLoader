@@ -65,8 +65,8 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
             self,
             dataset_path,
             vocab_path,
-            img_root,
-            img_feature_root,
+            img_root="",
+            img_feature_root="",
             raw_caption=False,
             raw_img=False,
             img_size=(224, 224),
@@ -128,15 +128,27 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
             v: k for k, v in self.word_ids.items()
         }
 
-        if raw_img:
+        if raw_img and img_root:
             self.img_proc = ImgProcesser(mean_type=img_mean)
             self.img_root = Path(img_root)
             if not self.img_root.exists() and not self.img_root.is_dir():
-                raise FileNotFoundError
-        else:
+                msg = "image root %s is not found\n" % str(self.img_root)
+                raise FileNotFoundError(msg)
+        elif not raw_img and img_feature_root:
             self.img_feature_root = Path(img_feature_root)
             if not self.img_feature_root.exists() and not self.img_feature_root.is_dir():
-                raise FileNotFoundError
+                msg = "image feature root %s is not found\n" % str(self.img_feature_root)
+                raise FileNotFoundError(msg)
+        else:
+            if raw_img:
+                img_path = "img_root"
+                img_type = "images"
+            else:
+                img_path = "img_feature_root"
+                img_type = "image features"
+
+            msg = '%s has to be defined to load %s\n' % (img_path, img_type)
+            raise NameError(msg)
 
         if preload_features and not raw_img:
             print("Loading image features...")
@@ -271,6 +283,13 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
         """return tokens from indices."""
         return [self.inv_word_ids[index] for index in indices]
 
+    def calc_unk_ratio(self, data):
+        """base function for callculate <UNK> ratio"""
+        unk = sum((np.array(s['caption']) == self.word_ids['<UNK>']).sum() for s in data)
+        words = sum(len(s['caption']) for s in data)
+
+        return round((unk / words) * 100, 3)
+
     @property
     def get_word_ids(self):
         """get word_ids"""
@@ -279,10 +298,7 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
     @property
     def get_unk_ratio(self):
         """get <UNK> ratio in self.captions"""
-        unk = sum((cap['caption'] == self.word_ids['<UNK>']).sum() for cap in self.captions)
-        words = sum(len(cap['caption']) for cap in self.captions)
-
-        return round((unk / words) * 100, 3)
+        return [self.calc_unk_ratio([cap for cap in self.captions])]
 
     @property
     def get_configurations(self):
