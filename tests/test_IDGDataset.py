@@ -4,71 +4,66 @@ import numpy as np
 
 from IDGDataset import IDGDatasetBase
 
+
 class TestIDGDatasetBase(unittest.TestCase):
-    def setup(self):
-        dataset_path = 'data/captions/converted/MSCOCO_captions/train2014.pkl'
-        vocab_path = 'data/vocab/mscoco_train2014_vocab.pkl'
-        img_root = 'data/images/original'
-        img_feature_root  = 'data/images/features/ResNet50'
+
+    def setUp(self):
+        self.dataset_path = Path('data/captions/converted/MSCOCO_captions/train2014.pkl')
+        self.vocab_path = Path('data/vocab/mscoco_train2014_vocab.pkl')
+        self.img_root = Path('data/images/original')
+        self.img_feature_root = Path('data/images/features/ResNet50')
+        self.raw_caption = True
+        self.raw_img = False
+        self.img_mean = "imagenet"
+        self.img_size = (224, 224)
+        self.preload_features = False
 
         self.IDG_Dataset = IDGDatasetBase(
-            dataset_path,
-            vocab_path,
-            img_root,
-            img_feature_root,
-            raw_caption=False,
-            raw_img=False,
-            img_mean='imagenet',
-            preload_features=True
+            self.dataset_path,
+            self.vocab_path,
+            self.img_root,
+            self.img_feature_root,
+            raw_caption=self.raw_caption,
+            raw_img=self.raw_img,
+            img_mean=self.img_mean,
+            preload_features=self.preload_features
         )
 
     def test_attributes(self):
-        pass
+        self.assertEqual(self.IDG_Dataset.img_feature_root, self.img_feature_root)
+        self.assertEqual(self.IDG_Dataset.raw_caption, self.raw_caption)
+        self.assertEqual(self.IDG_Dataset.raw_img, self.raw_img)
+        self.assertEqual(self.IDG_Dataset.img_size, self.img_size)
+        self.assertEqual(self.IDG_Dataset.preload_features, self.preload_features)
 
-    def test_get_example_preload(self):
-        randn = np.random.randint(0, len(self.IDG_Dataset))
-        image, caption = self.IDG_Dataset.get_example(randn)
+    def test_getitem_features(self):
+        for i in range(len(self.IDG_Dataset)):
+            img_feature, caption = self.IDG_Dataset[i]
 
-        self.assertIsInstance(image, np.ndarray)
-        self.assertEqual(image.shape[0], 2048)
+            img_id = self.IDG_Dataset.cap2img[i]
+            img_path = Path(self.IDG_Dataset.images[img_id]['file_path']).with_suffix("")
+            img_feature_inter = np.load('{0}.npz'.format(self.img_feature_root / img_path))['arr_0']
+            caption_inter = self.IDG_Dataset.captions[i]['caption']
 
-        self.assertIsInstance(caption, np.ndarray)
-
-    def test_get_example_raw_captions_with_no_preload(self):
-        self.IDG_Dataset.preload_features= False
-        self.IDG_Dataset.raw_caption = True
-
-        randn = np.random.randint(0, len(self.IDG_Dataset))
-        image, caption = self.IDG_Dataset.get_example(randn)
-
-        self.assertIsInstance(image, np.ndarray)
-        self.assertEqual(image.shape[0], 2048)
-
-        self.assertIsInstance(caption, list)
-
-    def test_get_example_raw_image(self):
-        self.IDG_Dataset.raw_img = True
-
-        randn = np.random.randint(0, len(self.IDG_Dataset))
-        image, caption = self.IDG_Dataset.get_example(randn)
-
-        self.assetIsInstance()
-
-
-    def test_get_raw_data(self):
-        pass
+            self.assertEqual(img_feature.any(), img_feature_inter.any())
+            self.assertIsInstance(img_feature, np.ndarray)
+            self.assertEqual(caption, caption_inter)
 
     def test_index2token(self):
-        pass
+        randn = np.random.randint(len(self.IDG_Dataset))
+        tokens = self.IDG_Dataset[randn][1]
 
-    def test_token2index(self):
-        pass
+        ids = self.IDG_Dataset.index2token(tokens)
+        reversed_tokens = self.IDG_Dataset.token2index(ids)
 
-    def test_get_word_ids(self):
-        pass
+        self.assertEqual(tokens, reversed_tokens)
 
-    def test_get_unk_ratio(self):
-        pass
+    def test_word_ids(self):
+        for token in self.IDG_Dataset.word_ids:
+            word_id = self.IDG_Dataset.word_ids[token]
+            reversed_tokens = self.IDG_Dataset.inv_word_ids[word_id]
+            self.assertEqual(token, reversed_tokens)
 
-    def get_configurations(self):
-        pass
+
+if __name__ == '__main__':
+    unittest.main()

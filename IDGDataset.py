@@ -16,27 +16,50 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
 
     Attributes
     ----------
-    dataset_path: str
-        path to dataset which contains image info and captions
-        preprocessed by mscoco2formatted.py and preprocess_tokens.py.
-    vocab_path: str
-        path to vocabulary dictionary created by preprocess_tokens.py.
-    img_root: str
+    word_ids : dict
+        map to ids from tokens.
+
+    inv_word_ids : dict
+        map to tokens from ids.
+
+    captions: list
+        list of captions loaded from dataset.
+
+    images: list
+        list of images loadef from dataset.
+
+    cap2img: dict
+        relatinships betweein caption id and image id.
+
+    img_root : str
         path to directory of images.
-    img_feature_root: str
+
+    img_feature_root : str
         path to directory of image features.
+
     raw_caption: bool, default False
         use raw captions(list) instead of numpy.ndarray format.
-    raw_img: bool, default False,
+
+    raw_img : bool, default False,
         use raw images insted of extracted features beforehand.
-    img_mean: str, default imagenet
+
+    img_mean : str, default imagenet
         image mean used for preprocess images.
         imagenet mean is used as a default.
-    img_size: tuple, default (224, 224)
+
+    img_size : tuple, default (224, 224)
         output image size after processing images.
         This attribute is used only when you load raw images.
-    preload_features: bool, default False
+
+    preload_features : bool, default False
         preload all image features onto RAM.
+
+    img_proc: class
+        ImgProcesser class to preprocess images.
+
+    img_features : numpy.ndarray
+        numpy.ndarray to save all image features onto RAM.
+        This attribute is available only when preload_features is True.
     """
     def __init__(
             self,
@@ -50,15 +73,53 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
             img_mean='imagenet',
             preload_features=False,
     ):
+        """
+        parameters
+        ----------
+        dataset_path : str
+            path to dataset which contains image info and captions
+            preprocessed by mscoco2formatted.py and preprocess_tokens.py.
 
-        if Path(dataset_path).exists() and Path(vocab_path).exists():
-            self.dataset = self.load_data(dataset_path)
+        vocab_path : str
+            path to vocabulary dictionary created by preprocess_tokens.py.
+
+        img_root : str
+            path to directory of images.
+
+        img_feature_root : str
+            path to directory of image features.
+
+        raw_caption : bool, default False
+            use raw captions(list) instead of numpy.ndarray format.
+
+        raw_img : bool, default False,
+            use raw images insted of extracted features beforehand.
+
+        img_mean : str, default imagenet
+            image mean used for preprocess images.
+            imagenet mean is used as a default.
+
+        img_size : tuple, default (224, 224)
+            output image size after processing images.
+            This attribute is used only when you load raw images.
+
+        preload_features : bool, default False
+            preload all image features onto RAM.
+        """
+
+        if Path(dataset_path).exists():
+            dataset = self.load_data(dataset_path)
+            self.captions = dataset['captions']
+            self.images = dataset['images']
+        else:
+            msg = 'File %s is not found.\n' % dataset_path
+            raise FileNotFoundError(msg)
+
+        if Path(vocab_path).exists():
             self.word_ids = self.load_data(vocab_path)
         else:
-            raise FileNotFoundError
-
-        self.captions = self.dataset['captions']
-        self.images = self.dataset['images']
+            msg = 'File %s is not found.\n' % vocab_path
+            raise FileNotFoundError(msg)
 
         self.cap2img = {
             caption['caption_idx']: caption['img_idx'] for caption in self.captions
@@ -77,8 +138,7 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
             if not self.img_feature_root.exists() and not self.img_feature_root.is_dir():
                 raise FileNotFoundError
 
-        if preload_features:
-
+        if preload_features and not raw_img:
             print("Loading image features...")
 
             self.img_features = np.array(
@@ -205,11 +265,11 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
     def token2index(self, tokens):
         """return indies from tokens."""
 
-        return [self.inv_word_ids[token] for token in tokens]
+        return [self.word_ids[token] for token in tokens]
 
     def index2token(self, indices):
         """return tokens from indices."""
-        return [self.word_ids[index] for index in indices]
+        return [self.inv_word_ids[index] for index in indices]
 
     @property
     def get_word_ids(self):
