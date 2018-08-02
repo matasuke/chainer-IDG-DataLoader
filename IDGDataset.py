@@ -286,9 +286,9 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
     def calc_unk_ratio(self, data):
         """base function for callculate <UNK> ratio"""
         unk = sum((np.array(s['caption']) == self.word_ids['<UNK>']).sum() for s in data)
-        words = sum(len(s['caption']) for s in data)
+        words = sum(np.array(['caption']).size for s in data)
 
-        return round((unk / words) * 100, 3)
+        return round(float(unk / words), 3)
 
     @property
     def get_word_ids(self):
@@ -298,7 +298,7 @@ class IDGDatasetBase(chainer.dataset.DatasetMixin):
     @property
     def get_unk_ratio(self):
         """get <UNK> ratio in self.captions"""
-        return [self.calc_unk_ratio([cap for cap in self.captions])]
+        return self.calc_unk_ratio([cap for cap in self.captions])
 
     @property
     def get_configurations(self):
